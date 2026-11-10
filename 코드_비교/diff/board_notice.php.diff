@@ -1,0 +1,66 @@
+--- before/board/notice.php
++++ after/board/notice.php
+@@ -13,44 +13,33 @@
+     ? $_POST['keyword']
+     : '';
+ 
+-$where = "posts.board_type = 'notice'";
++$sql = "
++    SELECT posts.id, posts.title, posts.created_at, posts.views, users.name
++    FROM posts JOIN users ON posts.user_id = users.id
++    WHERE posts.board_type = ?
++";
++$params = ['notice'];
++$types = "s";
+ 
+ if ($keyword !== '') {
+-
++    $like = "%{$keyword}%";
+     if ($search_type === 'writer') {
+-
+-        $where .= " AND users.name LIKE '%$keyword%'";
+-
++        $sql .= " AND users.name LIKE ?";
++        $params[] = $like; $types .= "s";
+     } elseif ($search_type === 'all') {
+-
+-        $where .= "
+-            AND (
+-                posts.title LIKE '%$keyword%'
+-                OR posts.content LIKE '%$keyword%'
+-            )
+-        ";
+-
++        $sql .= " AND (posts.title LIKE ? OR posts.content LIKE ?)";
++        $params[] = $like; $params[] = $like; $types .= "ss";
+     } else {
+-
+-        $where .= " AND posts.title LIKE '%$keyword%'";
++        $sql .= " AND posts.title LIKE ?";
++        $params[] = $like; $types .= "s";
+     }
+ }
++$sql .= " ORDER BY posts.id DESC";
+ 
+-$sql = "
+-    SELECT
+-        posts.id,
+-        posts.title,
+-        posts.created_at,
+-        posts.views,
+-        users.name
+-    FROM posts
+-    JOIN users
+-        ON posts.user_id = users.id
+-    WHERE $where
+-    ORDER BY posts.id DESC
+-";
+-
+-$result = $conn->query($sql);
++$stmt = $conn->prepare($sql);
++$stmt->bind_param($types, ...$params);
++$stmt->execute();
++$result = $stmt->get_result();
+ 
+ ?>
+ 

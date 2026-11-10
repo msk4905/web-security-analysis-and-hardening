@@ -1,0 +1,172 @@
+--- before/board/write.php
++++ after/board/write.php
+@@ -25,7 +25,7 @@
+ }
+ 
+ 
+-/* 공지사항은 관리자만 작성 */
++/* 공지사항은 관리자만 작성 (과제게시판은 학생도 작성 가능) */
+ 
+ if (
+     $board === 'notice'
+@@ -61,6 +61,10 @@
+     $_SERVER['REQUEST_METHOD'] === 'POST'
+     && $action === 'submit'
+ ) {
++    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
++        http_response_code(403);
++        die("잘못된 요청입니다.");
++    }
+ 
+     $title = isset($_POST['title'])
+         ? $_POST['title']
+@@ -87,25 +91,12 @@
+          * 기존 SQL 구조는 그대로 유지합니다.
+          */
+ 
+-        $sql = "
+-            INSERT INTO posts
+-            (
+-                user_id,
+-                board_type,
+-                title,
+-                content
+-            )
+-            VALUES
+-            (
+-                $user_id,
+-                '$board',
+-                '$title',
+-                '$content'
+-            )
+-        ";
+-
++        $stmt = $conn->prepare(
++            "INSERT INTO posts (user_id, board_type, title, content) VALUES (?, ?, ?, ?)"
++        );
++        $stmt->bind_param("isss", $user_id, $board, $title, $content);
+ 
+-        if ($conn->query($sql)) {
++        if ($stmt->execute()) {
+ 
+             $post_id = $conn->insert_id;
+ 
+@@ -146,28 +137,61 @@
+ 
+ 
+                 /*
+-                 * 사용자가 업로드한 원래 파일명
++                 * 1. 확장자 화이트리스트 — 이 목록에 없으면 즉시 거부
+                  */
+ 
++                $allowed_extensions = [
++                    'pdf', 'doc', 'docx', 'hwp', 'ppt', 'pptx', 'zip',
++                ];
++
+                 $original_filename =
+                     basename(
+                         $_FILES['attachment']['name']
+                     );
+ 
++                $ext = strtolower(
++                    pathinfo($original_filename, PATHINFO_EXTENSION)
++                );
++
++                if (!in_array($ext, $allowed_extensions, true)) {
++                    die("허용되지 않는 파일 형식입니다.");
++                }
++
++
++                /*
++                 * 2. 파일 내용(매직바이트) 검사 — 확장자만 바꿔 속이는 것 방지
++                 */
++
++                $finfo = finfo_open(FILEINFO_MIME_TYPE);
++                $mime  = finfo_file($finfo, $_FILES['attachment']['tmp_name']);
++                finfo_close($finfo);
++
++                $allowed_mimes = [
++                    'application/pdf',
++                    'application/msword',
++                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
++                    'application/x-hwp',
++                    'application/haansofthwp',
++                    'application/vnd.ms-powerpoint',
++                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
++                    'application/zip',
++                    'application/x-zip-compressed',
++                ];
++
++                if (!in_array($mime, $allowed_mimes, true)) {
++                    die("파일 내용이 선언한 형식과 일치하지 않습니다.");
++                }
++
+ 
+                 /*
+-                 * 서버 저장 파일명
+-                 *
+-                 * 게시글번호_원래파일명
+-                 *
+-                 * 예:
+-                 * 35_report.pdf
++                 * 3. 서버 저장 파일명 — 예측 불가능한 랜덤값 + 검증된 확장자만 사용
++                 *    (게시글번호_원래파일명 방식은 URL 추측이 쉬워 폐기)
+                  */
+ 
+                 $stored_filename =
+-                    $post_id
+-                    . "_"
+-                    . $original_filename;
++                    bin2hex(random_bytes(16))
++                    . "."
++                    . $ext;
+ 
+ 
+                 /*
+@@ -191,18 +215,25 @@
+                 ) {
+ 
+                     /*
+-                     * DB에 파일명 기록
++                     * 4. DB에 파일명 기록 — Prepared Statement
++                     *    (원래 파일명을 그대로 SQL에 이어붙이면 여기서도
++                     *    SQL Injection이 가능했기 때문에 함께 닫는다)
+                      */
+ 
+-                    $file_sql = "
++                    $stmt = $conn->prepare("
+                         UPDATE posts
+                         SET
+-                            original_filename = '$original_filename',
+-                            stored_filename = '$stored_filename'
+-                        WHERE id = $post_id
+-                    ";
+-
+-                    $conn->query($file_sql);
++                            original_filename = ?,
++                            stored_filename = ?
++                        WHERE id = ?
++                    ");
++                    $stmt->bind_param(
++                        "ssi",
++                        $original_filename,
++                        $stored_filename,
++                        $post_id
++                    );
++                    $stmt->execute();
+                 }
+             }
+ 
+@@ -357,7 +388,11 @@
+                     name="action"
+                     value="submit"
+                 >
+-
++		<input 
++		    type="hidden" 
++		    name="csrf_token" 
++		    value="<?php echo $_SESSION['csrf_token']; ?>"
++		> 
+ 
+                 <!-- 제목 -->
+ 

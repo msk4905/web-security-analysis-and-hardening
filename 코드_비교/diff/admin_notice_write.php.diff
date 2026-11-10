@@ -1,0 +1,32 @@
+--- before/admin/notice_write.php
++++ after/admin/notice_write.php
+@@ -25,24 +25,12 @@
+ 
+         $user_id = $_SESSION['user_id'];
+ 
+-        $sql = "
+-            INSERT INTO posts
+-            (
+-                user_id,
+-                board_type,
+-                title,
+-                content
+-            )
+-            VALUES
+-            (
+-                $user_id,
+-                'notice',
+-                '$title',
+-                '$content'
+-            )
+-        ";
++        $stmt = $conn->prepare(
++            "INSERT INTO posts (user_id, board_type, title, content) VALUES (?, 'notice', ?, ?)"
++        );
++        $stmt->bind_param("iss", $user_id, $title, $content);
+ 
+-        if ($conn->query($sql)) {
++        if ($stmt->execute()) {
+ 
+             $post_id = $conn->insert_id;
+ 

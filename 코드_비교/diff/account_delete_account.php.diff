@@ -1,0 +1,45 @@
+--- before/account/delete_account.php
++++ after/account/delete_account.php
+@@ -5,20 +5,21 @@
+ 
+ requireLogin();
+ 
+-$id = isset($_GET['id'])
+-    ? $_GET['id']
+-    : $_SESSION['user_id'];
++$id = $_SESSION['user_id'];
+ 
+ $error = "";
+ 
+ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+ 
+-    $sql = "
+-        DELETE FROM users
+-        WHERE id = $id
+-    ";
++    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
++        http_response_code(403);
++        die("잘못된 요청입니다.");
++    }
++
++    $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
++    $stmt->bind_param("i", $id); // "i" = 정수. 숫자가 아닌 값은 바인딩 단계에서 걸러짐
+ 
+-    if ($conn->query($sql)) {
++    if ($stmt->execute()) {
+ 
+         if ($id == $_SESSION['user_id']) {
+ 
+@@ -78,7 +79,11 @@
+ 
+                 <form method="post"
+                       action="delete_account.php?id=<?php echo $id; ?>">
+-
++                      <input 
++                          type="hidden" 
++                          name="csrf_token" 
++                          value="<?php echo $_SESSION['csrf_token']; ?>"
++                      >
+                     <button
+                         class="btn btn-primary full"
+                         type="submit"

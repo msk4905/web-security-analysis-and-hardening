@@ -1,0 +1,106 @@
+--- before/account/edit.php
++++ after/account/edit.php
+@@ -5,68 +5,48 @@
+ 
+ requireLogin();
+ 
+-$id = isset($_GET['id'])
+-    ? $_GET['id']
+-    : $_SESSION['user_id'];
++$id = $_SESSION['user_id'];
+ 
+ $message = "";
+ $error = "";
+ 
+-$sql = "
+-    SELECT *
+-    FROM users
+-    WHERE id = $id
+-";
++$stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
++$stmt->bind_param("i", $id);
++$stmt->execute();
++$user = $stmt->get_result()->fetch_assoc();
+ 
+-$result = $conn->query($sql);
+-
+-if (!$result || $result->num_rows !== 1) {
++if (!$user) {
+     die("회원 정보를 찾을 수 없습니다.");
+ }
+ 
+-$user = $result->fetch_assoc();
+-
+ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+ 
++    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
++        http_response_code(403);
++        die("잘못된 요청입니다.");
++    }
++    
+     $name = $_POST['name'];
+     $email = $_POST['email'];
+     $password = $_POST['password'];
+ 
+     if ($password !== "") {
+-
+-        $sql = "
+-            UPDATE users
+-            SET
+-                name = '$name',
+-                email = '$email',
+-                password = '$password'
+-            WHERE id = $id
+-        ";
+-
++        $password = password_hash($password, PASSWORD_DEFAULT);
++        $stmt = $conn->prepare("UPDATE users SET name = ?, email = ?, password = ? WHERE id = ?");
++        $stmt->bind_param("sssi", $name, $email, $password, $id);
+     } else {
+-
+-        $sql = "
+-            UPDATE users
+-            SET
+-                name = '$name',
+-                email = '$email'
+-            WHERE id = $id
+-        ";
++        $stmt = $conn->prepare("UPDATE users SET name = ?, email = ? WHERE id = ?");
++        $stmt->bind_param("ssi", $name, $email, $id);
+     }
+ 
+-    if ($conn->query($sql)) {
++    if ($stmt->execute()) {
+ 
+         $message = "회원 정보가 수정되었습니다.";
+ 
+-        $result = $conn->query("
+-            SELECT *
+-            FROM users
+-            WHERE id = $id
+-        ");
+-
+-        if ($result && $result->num_rows === 1) {
+-            $user = $result->fetch_assoc();
+-        }
++        $refetch = $conn->prepare("SELECT * FROM users WHERE id = ?");
++        $refetch->bind_param("i", $id);
++        $refetch->execute();
++        $user = $refetch->get_result()->fetch_assoc();
+ 
+         if ($id == $_SESSION['user_id']) {
+             $_SESSION['name'] = $user['name'];
+@@ -117,7 +97,12 @@
+ 
+                 <form method="post"
+                       action="edit.php?id=<?php echo $id; ?>">
+-
++                    <input 
++                        type="hidden" 
++                        name="csrf_token" 
++                        value="<?php echo $_SESSION['csrf_token']; ?>"
++                    >
++                    
+                     <div class="field">
+                         <label for="username">ID</label>
+                         <input

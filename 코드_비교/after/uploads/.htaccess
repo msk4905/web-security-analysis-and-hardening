@@ -1,0 +1,28 @@
+# 업로드 폴더(및 하위 폴더 전체)에서 PHP 실행 차단
+# — 화이트리스트/매직바이트 검증을 우회당하더라도
+#   웹쉘이 '실행'되는 것 자체를 막는 최종 방어선
+
+<FilesMatch "\.(php|php3|php4|php5|php7|phtml|pht|phar)$">
+    Require all denied
+</FilesMatch>
+
+# 구버전 Apache(AllowOverride에서 mod_access 쓰는 환경) 대비
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.(php|php3|php4|php5|php7|phtml|pht|phar)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# PHP 핸들러 자체도 무력화 (AddHandler/SetHandler로 우회 방지)
+<IfModule mod_php.c>
+    php_admin_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_admin_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_admin_flag engine off
+</IfModule>
+
+Options -ExecCGI -Indexes

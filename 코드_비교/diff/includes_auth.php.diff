@@ -1,0 +1,21 @@
+--- before/includes/auth.php
++++ after/includes/auth.php
+@@ -1,7 +1,18 @@
+ <?php
+ 
++session_set_cookie_params([
++    'httponly' => true,   // JS(document.cookie)로 읽기 불가
++    'secure'   => true,   // HTTPS 연결에서만 쿠키를 전송합니다. 이 서버는 HTTPS를 적용했으므로 true로 둡니다.
++                          // HTTP로 접속하면 쿠키가 전송되지 않아 로그인이 되지 않으므로, HTTP 요청은 HTTPS로 리다이렉트합니다.
++    'samesite' => 'Lax',  // 다른 사이트에서 날아온 요청엔 쿠키를 안 실음
++]);
++
+ session_start();
+ 
++if (empty($_SESSION['csrf_token'])) {
++    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
++}
++
+ function isLoggedIn()
+ {
+     return isset($_SESSION['user_id']);

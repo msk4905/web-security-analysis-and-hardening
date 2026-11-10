@@ -1,0 +1,21 @@
+--- before/account/find_id.php
++++ after/account/find_id.php
+@@ -15,14 +15,10 @@
+     $name = $_POST['name'];
+     $email = $_POST['email'];
+ 
+-    $sql = "
+-        SELECT username
+-        FROM users
+-        WHERE name = '$name'
+-        AND email = '$email'
+-    ";
+-
+-    $result = $conn->query($sql);
++    $stmt = $conn->prepare("SELECT username FROM users WHERE name = ? AND email = ?");
++    $stmt->bind_param("ss", $name, $email);
++    $stmt->execute();
++    $result = $stmt->get_result();
+ 
+     if ($result && $result->num_rows > 0) {
+         $user = $result->fetch_assoc();

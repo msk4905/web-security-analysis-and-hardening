@@ -1,0 +1,40 @@
+--- before/account/register.php
++++ after/account/register.php
+@@ -31,27 +31,22 @@
+         exit;
+     }
+ 
+-    $check_sql = "
+-        SELECT id
+-        FROM users
+-        WHERE username = '$username'
+-    ";
++    $stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
++    $stmt->bind_param("s", $username);
++    $stmt->execute();
+ 
+-    $check_result = $conn->query($check_sql);
+-
+-    if ($check_result && $check_result->num_rows > 0) {
++    if ($stmt->get_result()->num_rows > 0) {
+         header("Location: register.php?error=duplicate");
+         exit;
+     }
+ 
+-    $sql = "
+-        INSERT INTO users
+-        (username, password, name, email, role)
+-        VALUES
+-        ('$username', '$password', '$name', '$email', 'student')
+-    ";
++    $hashed = password_hash($password, PASSWORD_DEFAULT);
++    $stmt = $conn->prepare(
++        "INSERT INTO users (username, password, name, email, role) VALUES (?, ?, ?, ?, 'student')"
++    );
++    $stmt->bind_param("ssss", $username, $hashed, $name, $email);
+ 
+-    if ($conn->query($sql)) {
++    if ($stmt->execute()) {
+         header("Location: login.php");
+         exit;
+     }

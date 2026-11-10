@@ -1,0 +1,16 @@
+--- before/includes/db.php
++++ after/includes/db.php
+@@ -1,9 +1,9 @@
+ <?php
+ 
+-$host = "localhost";
+-$dbname = "training_web";
+-$username = "webuser";
+-$password = "webpass123";
++$host     = getenv('DB_HOST');
++$dbname   = getenv('DB_NAME');
++$username = getenv('DB_USER');
++$password = getenv('DB_PASS');
+ 
+ $conn = new mysqli(
+     $host,

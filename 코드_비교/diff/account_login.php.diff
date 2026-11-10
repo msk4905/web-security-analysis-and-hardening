@@ -1,0 +1,55 @@
+--- before/account/login.php
++++ after/account/login.php
+@@ -8,6 +8,10 @@
+ }
+ 
+ $error = isset($_GET['error']);
++$requireCaptcha = isset($_GET['captcha']) && $_GET['captcha'] === '1';
++$prefillUsername = isset($_GET['username']) ? $_GET['username'] : '';
++$resetSuccess = isset($_GET['reset']) && $_GET['reset'] === 'success';
++
+ ?>
+ 
+ <?php require_once "../includes/header.php"; ?>
+@@ -24,11 +28,18 @@
+         </div>
+ 
+         <div style="max-width:520px;margin:0 auto;">
+-
++        
++<?php if ($resetSuccess): ?>
++    <div class="card"
++         style="margin-bottom:20px;border-color:#2ecc71;">
++        비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.
++    </div>
++    
++<?php endif; ?>
+             <?php if ($error): ?>
+                 <div class="card"
+                      style="margin-bottom:20px;border-color:#ff5c5c;">
+-                    아이디 또는 비밀번호가 올바르지 않습니다.
++                    <?php echo $requireCaptcha ? "캡차를 완료해야 로그인할 수 있습니다." : "아이디 또는 비밀번호가 올바르지 않습니다."; ?>
+                 </div>
+             <?php endif; ?>
+ 
+@@ -43,6 +54,7 @@
+                             name="username"
+                             type="text"
+                             placeholder="아이디를 입력하세요"
++                            value="<?php echo htmlspecialchars($prefillUsername); ?>"
+                             required
+                         >
+                     </div>
+@@ -57,6 +69,12 @@
+                             required
+                         >
+                     </div>
++                    <?php if ($requireCaptcha): ?>
++                        <div class="field">
++                            <div class="g-recaptcha" data-sitekey="6LcTi9gtAAAAAC0P8Gc52VK0_9KaFA_6h-iSyQSh"></div>
++                        </div>
++                        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
++                    <?php endif; ?>                    
+ 
+                     <button
+                         class="btn btn-primary full"

@@ -1,0 +1,87 @@
+--- before/board/assignment.php
++++ after/board/assignment.php
+@@ -13,44 +13,33 @@
+     ? $_POST['keyword']
+     : '';
+ 
+-$where = "posts.board_type = 'assignment'";
++$sql = "
++    SELECT posts.id, posts.title, posts.created_at, posts.views, users.name
++    FROM posts JOIN users ON posts.user_id = users.id
++    WHERE posts.board_type = ?
++";
++$params = ['assignment'];
++$types = "s";
+ 
+ if ($keyword !== '') {
+-
++    $like = "%{$keyword}%";
+     if ($search_type === 'writer') {
+-
+-        $where .= " AND users.name LIKE '%$keyword%'";
+-
++        $sql .= " AND users.name LIKE ?";
++        $params[] = $like; $types .= "s";
+     } elseif ($search_type === 'all') {
+-
+-        $where .= "
+-            AND (
+-                posts.title LIKE '%$keyword%'
+-                OR posts.content LIKE '%$keyword%'
+-            )
+-        ";
+-
++        $sql .= " AND (posts.title LIKE ? OR posts.content LIKE ?)";
++        $params[] = $like; $params[] = $like; $types .= "ss";
+     } else {
+-
+-        $where .= " AND posts.title LIKE '%$keyword%'";
++        $sql .= " AND posts.title LIKE ?";
++        $params[] = $like; $types .= "s";
+     }
+ }
++$sql .= " ORDER BY posts.id DESC";
+ 
+-$sql = "
+-    SELECT
+-        posts.id,
+-        posts.title,
+-        posts.created_at,
+-        posts.views,
+-        users.name
+-    FROM posts
+-    JOIN users
+-        ON posts.user_id = users.id
+-    WHERE $where
+-    ORDER BY posts.id DESC
+-";
+-
+-$result = $conn->query($sql);
++$stmt = $conn->prepare($sql);
++$stmt->bind_param($types, ...$params);
++$stmt->execute();
++$result = $stmt->get_result();
+ 
+ ?>
+ 
+@@ -70,13 +59,13 @@
+                 <p>과제 관련 게시글을 확인할 수 있습니다.</p>
+             </div>
+ 
+-            <?php if (isAdmin()): ?>
+-                <form class="board-write-form" action="write.php" method="post">
+-                    <input type="hidden" name="board" value="assignment">
+-                    <input type="hidden" name="action" value="open">
+-                    <button class="btn btn-primary" type="submit">과제 등록</button>
+-                </form>
+-            <?php endif; ?>
++            <form class="board-write-form" action="write.php" method="post">
++                <input type="hidden" name="board" value="assignment">
++                <input type="hidden" name="action" value="open">
++                <button class="btn btn-primary" type="submit">
++                    <?php echo isAdmin() ? '과제 등록' : '과제 제출'; ?>
++                </button>
++            </form>
+ 
+         </div>
+ 
