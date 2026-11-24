@@ -14,6 +14,10 @@ PHP 게시판의 취약점을 재현하고 코드를 수정한 뒤, GNS3에서 W
 | 네트워크 | Cisco ASAv로 Outside·DMZ·Inside를 분리했습니다. Web에서 DB 3306과 Mail 25로 연결되는 경로를 유지하고, 외부 호스트의 DB·Mail 접근과 같은 Inside 대역의 Mail↔DB 업무 포트 접근을 각각 시험했습니다. |
 | 웹 요청과 전송 | ModSecurity와 OWASP CRS가 지정한 SQL Injection·XSS 요청을 HTTP 403으로 차단했습니다. 브라우저와 Web 사이에 HTTPS를 적용했고, Web에서 Mail로 보낸 재설정 메일이 STARTTLS를 사용해 배달된 것을 Postfix 로그에서 확인했습니다. |
 
+## 시스템 엔지니어 직무 관련 근거
+
+[Linux 가상 서버 구성·상태 확인 요약](시스템_인프라_검증요약.md)에서 Web·DB·Mail VM의 서비스와 네트워크 연결 검증 근거를 먼저 확인할 수 있습니다. 이는 격리된 교육 실습환경 기록이며 상용 서버 운영 경험은 아닙니다.
+
 ## 상세 자료
 
 - [보안 구성 요약](보안구성_요약.md)
