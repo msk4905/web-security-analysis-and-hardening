@@ -4,13 +4,14 @@
 
 - 공개본의 `account/login_process.php`에서 reCAPTCHA 비밀키를 `YOUR_RECAPTCHA_SECRET_KEY`로 대체했습니다. 계정별 실패 횟수가 5회 이상일 때 캡차를 요구하는 조건은 시험 설정을 반영합니다.
 - `uploads/.htaccess`와 `includes/mailer.php`는 보완 과정에서 추가한 파일입니다.
+- 기존 `before/`는 과거 취약본 그대로 보존합니다. `after/account/reset_password.php`는 2026-11-24에 메일 발송 실패 시 코드 화면 표시를 제거하고 해당 코드를 폐기하도록 추가 수정한 공개 코드입니다. 이전 실습 캡처는 수정 전 시험 기록이며, 추가 수정된 코드의 메일 성공·실패 실환경 검증은 완료되지 않았습니다.
 
 | 파일 | 주요 보완 내용 | diff |
 |---|---|---|
 | `account/login_process.php` | Prepared Statement, 비밀번호 해시 검증, 로그인 실패 횟수 기록, 세션 ID 재발급 | [보기](diff/account_login_process.php.diff) |
 | `account/login.php` | 출력 이스케이프, reCAPTCHA 위젯 | [보기](diff/account_login.php.diff) |
 | `account/register.php` | Prepared Statement, 비밀번호 해시 저장 | [보기](diff/account_register.php.diff) |
-| `account/reset_password.php` | 이메일 인증코드 발급과 검증, 코드 만료 시간, Prepared Statement | [보기](diff/account_reset_password.php.diff) |
+| `account/reset_password.php` | 이메일 인증코드 발급과 검증, 코드 만료 시간, Prepared Statement, 메일 실패 시 코드 노출 방지 및 폐기(추가 수정·실환경 재시험 미완료) | [보기](diff/account_reset_password.php.diff) |
 | `account/find_id.php` | Prepared Statement | [보기](diff/account_find_id.php.diff) |
 | `account/edit.php` | 본인 확인(IDOR 방어), CSRF 토큰, Prepared Statement, 비밀번호 해시 | [보기](diff/account_edit.php.diff) |
 | `account/delete_account.php` | 본인 확인, CSRF 토큰, Prepared Statement | [보기](diff/account_delete_account.php.diff) |
