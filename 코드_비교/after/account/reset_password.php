@@ -48,15 +48,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $stage === 1 && isset($_POST['usern
             $mail->send();
 
             $message = "입력하신 이메일로 인증코드를 보냈습니다.";
+            $_SESSION['reset_username'] = $username;
+            $_SESSION['reset_email'] = $email;
+            $stage = 2;
 
         } catch (Exception $e) {
-            // 메일 서버 연결 문제로 발송이 안 되더라도 학습은 이어갈 수 있게, 코드를 화면에 표시
-            $message = "메일 발송에 실패했습니다. (테스트용) 인증코드: $code";
-        }
+            // 발송 실패 시 인증코드를 노출하거나 재설정 단계로 넘어가지 않습니다.
+            // 방금 발급한 코드에 한해 폐기하여 다른 요청에서 발급한 코드를 지우지 않습니다.
+            $revoke = $conn->prepare(
+                "UPDATE users SET reset_code = NULL, reset_expires = NULL WHERE username = ? AND email = ? AND reset_code = ?"
+            );
+            $revoke->bind_param("sss", $username, $email, $code);
+            $revoke->execute();
 
-        $_SESSION['reset_username'] = $username;
-        $_SESSION['reset_email'] = $email;
-        $stage = 2;
+            error_log("Password reset mail delivery failed: " . get_class($e));
+            $error = "인증 메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        }
 
     } else {
         // 이름/이메일이 실제로 일치했는지는 화면에서 구분해 보여주지 않습니다
